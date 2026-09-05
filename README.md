@@ -23,6 +23,7 @@ This is an **Omarchy-specific port and rewrite** of [sarodscommits/hyprland-infi
 - **Super+Alt+arrow** — focus the next window in that direction. The camera re-centers on it and it grows to fill roughly two-thirds of the screen (small windows zoom in more, large windows barely change) — a real `resize`, so nothing outside that one window is affected.
 - **Super+D** — toggle every window on the workspace between floating and tiled.
 - **Super+0** — manual escape hatch: snaps the currently-enlarged window back to its original size.
+- **Super+M** — toggle new windows back to Omarchy's normal automatic tiling (and back again). Takes effect after your next login/reboot, not instantly — see [note below](#a-note-on-superm).
 - New windows open floating by default, so they immediately join the canvas.
 
 Everything else (tiled windows, workspaces, the rest of Omarchy) works exactly as before.
@@ -69,6 +70,11 @@ Remove the block marked `>>> omarchy-windows-free-position (auto-installed) STAR
 | `Super+Shift+Z` / `Super+Shift+.` | Move window to previous / next workspace |
 | `Super+D` | Toggle floating/tiled for every window on the workspace |
 | `Super+0` | Reset the currently-enlarged window back to its original size |
+| `Super+M` | Toggle auto-float for *new* windows on/off (applies after next login/reboot) |
+
+### A note on Super+M
+
+Hyprland's Lua window rules are additive and never get cleared on `hyprctl reload` — unlike keybinds, which do reset cleanly. That means flipping this toggle can't take effect immediately; it just flips a flag file (`~/.local/state/omarchy/toggles/infinite-desktop-autofloat-disabled`, using Omarchy's own `omarchy-toggle` flag convention) that's checked once, the next time `hyprland.lua` runs from scratch (login or reboot). The keybind sends a notification saying so instead of pretending it's instant. If you just want your *current* windows tiled again right now, use **Super+D** instead — that one is instant.
 
 ## How it works
 

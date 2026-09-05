@@ -87,15 +87,32 @@ patch_hyprland_lua() {
 -- start floating instead of tiled. Also give it a sane default size: without
 -- this, a floated window inherits the size it would have had as a tiled
 -- window, which for the first/only window on a workspace is the full
--- monitor area (looks like fullscreen even though it isn't). Remove this
--- block if you want to keep Omarchy's default tiling behavior for new windows.
-o.window(\".*\", { float = true, size = \"60% 60%\" })
+-- monitor area (looks like fullscreen even though it isn't).
+--
+-- Toggle this off with Super+M, to go back to Omarchy's normal automatic
+-- tiling for windows opened from then on. NOTE: Hyprland's Lua window rules
+-- are additive and never cleared on \`hyprctl reload\` (unlike keybinds), so
+-- this flag only takes effect after the next full Hyprland restart/login,
+-- not immediately - the keybind shows a notification saying so.
+local function file_exists(path)
+  local f = io.open(path, \"r\")
+  if f then f:close(); return true end
+  return false
+end
 
--- Omarchy's own browser.lua force-tiles chromium/firefox-based browsers
--- (tag \"chromium-based-browser\" / \"firefox-based-browser\"), which otherwise
--- overrides the generic float rule above. Override it back to floating.
-o.window({ tag = \"chromium-based-browser\" }, { float = true, size = \"60% 60%\" })
-o.window({ tag = \"firefox-based-browser\" }, { float = true, size = \"60% 60%\" })
+local autofloat_disabled = file_exists(
+  os.getenv(\"HOME\") .. \"/.local/state/omarchy/toggles/infinite-desktop-autofloat-disabled\"
+)
+
+if not autofloat_disabled then
+  o.window(\".*\", { float = true, size = \"60% 60%\" })
+
+  -- Omarchy's own browser.lua force-tiles chromium/firefox-based browsers
+  -- (tag \"chromium-based-browser\" / \"firefox-based-browser\"), which otherwise
+  -- overrides the generic float rule above. Override it back to floating.
+  o.window({ tag = \"chromium-based-browser\" }, { float = true, size = \"60% 60%\" })
+  o.window({ tag = \"firefox-based-browser\" }, { float = true, size = \"60% 60%\" })
+end
 $MARK_END"
 }
 
@@ -116,6 +133,12 @@ o.bind(\"SUPER + D\", \"Infinite Desktop: toggle floating/tiled (all windows)\",
 
 -- Manual escape hatch: reset the currently-enlarged window back to its original size
 o.bind(\"SUPER + 0\", \"Infinite Desktop: reset enlarged window size\", \"python3 ~/scripts/reset_zoom.py\")
+
+-- Switch new windows back to Omarchy's normal automatic tiling (and back
+-- again). Hyprland's Lua window rules aren't cleared on reload, so this only
+-- takes effect after the next full Hyprland restart/login - the notification
+-- says so instead of pretending it's instant.
+o.bind(\"SUPER + M\", \"Infinite Desktop: toggle auto-float for new windows (applies after next restart)\", \"omarchy-toggle infinite-desktop-autofloat-disabled toggle && omarchy-notification-send 'Infinite Desktop' 'Auto-float for new windows toggled - takes effect after you log out/in or reboot'\")
 
 -- Navigate between windows: focuses the neighbor, pans the camera to center
 -- it, and grows it (real resize, not a screen zoom) based on how small it is.
