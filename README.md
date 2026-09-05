@@ -4,7 +4,7 @@ Turn [Omarchy](https://omarchy.org/)'s Hyprland desktop into an "infinite canvas
 
 This is an **Omarchy-specific port and rewrite** of [sarodscommits/hyprland-infinite-desktop-v2](https://github.com/sarodscommits/hyprland-infinitie-desktop-v2), rebuilt to actually work with Omarchy's Lua-based Hyprland config (`hl.bind`, `o.bind`, `hl.config`, ...) instead of the classic `hyprland.conf` format. Several real bugs from the original were found and fixed along the way (see [What's different from the original](#whats-different-from-the-original-repo) below).
 
-> Built with the help of [Claude Code](https://claude.com/claude-code) (Anthropic's AI coding assistant) — reviewed and tested on a real Omarchy laptop before publishing.
+> **Note:** This project was built largely with AI assistance — [Claude Code](https://claude.com/claude-code) (Anthropic's AI coding assistant) did most of the porting, debugging and writing here, guided and reviewed by a human, and tested on a real Omarchy laptop before publishing.
 
 ## Screenshots
 
