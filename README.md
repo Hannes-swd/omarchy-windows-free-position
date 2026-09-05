@@ -85,6 +85,7 @@ The original project (a solid idea) targeted vanilla Hyprland and had a few issu
 - **No HiDPI/fractional-scaling awareness**: window centering used the monitor's raw pixel resolution from `hyprctl monitors`, but window positions in Hyprland are in *logical* coordinates (`pixels / scale`). On any monitor with fractional scaling (e.g. 1.25x, 1.5x) windows would center off to one side instead of the true middle of the screen. Fixed by dividing by `scale` everywhere a monitor size is used.
 - **Screen zoom instead of window resize**: an earlier version of the "zoom in on focus" feature used Hyprland's `cursor:zoom_factor`, which magnifies the *entire output* — bar, wallpaper, cursor, everything. It now does a real per-window resize instead, so nothing outside the target window is ever touched.
 - **A stray "protected apps" list silently blocked focus**: a leftover safeguard from the original camera-pan design (meant to avoid disorienting jumps into browsers) made the navigate keybind quietly refuse to focus Chromium/Firefox/etc. Removed since it no longer applies once the camera-follow logic changed.
+- **New windows opened full-screen-sized / browsers stayed tiled**: floating a window with no explicit size makes it inherit the size it would have had while tiled — for the first window on a workspace, that's the whole monitor. And Omarchy's own `browser.lua` force-tiles Chromium/Firefox-based windows, which silently overrode the float rule. Fixed with an explicit default size (`60% 60%`) and an override rule for the browser tags specifically.
 
 ## License
 

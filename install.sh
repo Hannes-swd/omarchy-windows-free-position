@@ -90,6 +90,12 @@ patch_hyprland_lua() {
 -- monitor area (looks like fullscreen even though it isn't). Remove this
 -- block if you want to keep Omarchy's default tiling behavior for new windows.
 o.window(\".*\", { float = true, size = \"60% 60%\" })
+
+-- Omarchy's own browser.lua force-tiles chromium/firefox-based browsers
+-- (tag \"chromium-based-browser\" / \"firefox-based-browser\"), which otherwise
+-- overrides the generic float rule above. Override it back to floating.
+o.window({ tag = \"chromium-based-browser\" }, { float = true, size = \"60% 60%\" })
+o.window({ tag = \"firefox-based-browser\" }, { float = true, size = \"60% 60%\" })
 $MARK_END"
 }
 
