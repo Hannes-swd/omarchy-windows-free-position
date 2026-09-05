@@ -87,6 +87,10 @@ The original project (a solid idea) targeted vanilla Hyprland and had a few issu
 - **A stray "protected apps" list silently blocked focus**: a leftover safeguard from the original camera-pan design (meant to avoid disorienting jumps into browsers) made the navigate keybind quietly refuse to focus Chromium/Firefox/etc. Removed since it no longer applies once the camera-follow logic changed.
 - **New windows opened full-screen-sized / browsers stayed tiled**: floating a window with no explicit size makes it inherit the size it would have had while tiled — for the first window on a workspace, that's the whole monitor. And Omarchy's own `browser.lua` force-tiles Chromium/Firefox-based windows, which silently overrode the float rule. Fixed with an explicit default size (`60% 60%`) and an override rule for the browser tags specifically.
 
+## Credits
+
+Based on [sarodscommits/hyprland-infinitie-desktop-v2](https://github.com/sarodscommits/hyprland-infinitie-desktop-v2) — original idea and mouse-pan implementation. This repo is an Omarchy-specific port with the fixes described above.
+
 ## License
 
 MIT — see [LICENSE](LICENSE). Based on [sarodscommits/hyprland-infinitie-desktop-v2](https://github.com/sarodscommits/hyprland-infinitie-desktop-v2) (MIT).
