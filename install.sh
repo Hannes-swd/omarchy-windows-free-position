@@ -84,9 +84,12 @@ $MARK_END"
 patch_hyprland_lua() {
     append_block_if_missing "${HYPR_DIR}/hyprland.lua" "$MARK_START
 -- This tool only moves/navigates FLOATING windows, so make every new window
--- start floating instead of tiled. Remove this block if you want to keep
--- Omarchy's default tiling behavior for new windows.
-o.window(\".*\", { float = true })
+-- start floating instead of tiled. Also give it a sane default size: without
+-- this, a floated window inherits the size it would have had as a tiled
+-- window, which for the first/only window on a workspace is the full
+-- monitor area (looks like fullscreen even though it isn't). Remove this
+-- block if you want to keep Omarchy's default tiling behavior for new windows.
+o.window(\".*\", { float = true, size = \"60% 60%\" })
 $MARK_END"
 }
 
