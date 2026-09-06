@@ -21,6 +21,20 @@ GAP = 28          # espacio minimo entre ventanas, para que no se "peguen"/snape
 STEP = 70          # separacion entre anillos de la espiral
 MAX_RINGS = 14     # limite de intentos antes de rendirse y usar el mejor candidato
 
+# Mismos valores que navigate_windows.py: si el tamano ya coincide con esta
+# formula, navegar hacia/desde la ventana despues no le cambia el tamano.
+FILL_RATIO = 0.65
+MIN_ZOOM = 1.0
+MAX_ZOOM = 2.2
+
+
+def zoom_for_window_size(window_w, window_h, monitor_w, monitor_h):
+    if window_w <= 0 or window_h <= 0:
+        return MIN_ZOOM
+    zoom_x = (monitor_w * FILL_RATIO) / window_w
+    zoom_y = (monitor_h * FILL_RATIO) / window_h
+    return max(MIN_ZOOM, min(MAX_ZOOM, min(zoom_x, zoom_y)))
+
 
 def hyprctl_json(args, timeout=1):
     try:
@@ -41,12 +55,21 @@ def move_window_exact(x, y, address, timeout=1):
         pass
 
 
-def move_windows_batch(moves, timeout=2):
-    """moves: lista de (x, y, address). Un solo hyprctl --batch para que la
-    camara se mueva de golpe en vez de ventana por ventana."""
-    if not moves:
+def resize_window_lua(w, h, address):
+    return f'hl.dsp.window.resize({{ window = "address:{address}", x = {int(w)}, y = {int(h)}, relative = false }})'
+
+
+def move_windows_batch(moves, resizes=(), timeout=2):
+    """moves: lista de (x, y, address). resizes: lista de (w, h, address).
+    Un solo hyprctl --batch para que la camara (y el resize de la ventana
+    nueva) se apliquen de golpe en vez de uno por uno. Resize va primero:
+    cambia el tamano anclado en la esquina actual, y el move de despues deja
+    la posicion final exacta sin importar como ancle el resize."""
+    exprs = [resize_window_lua(w, h, addr) for w, h, addr in resizes]
+    exprs += [move_window_lua(x, y, addr) for x, y, addr in moves]
+    if not exprs:
         return
-    cmd = " ; ".join(f"dispatch {move_window_lua(x, y, addr)}" for x, y, addr in moves)
+    cmd = " ; ".join(f"dispatch {e}" for e in exprs)
     try:
         subprocess.run(["hyprctl", "--batch", cmd], capture_output=True, timeout=timeout)
     except Exception:
@@ -196,7 +219,14 @@ def place_new_window(address):
             "left": x, "top": y, "right": x + ww, "bottom": y + wh,
         })
 
-    width, height = target["size"][0], target["size"][1]
+    native_w, native_h = target["size"][0], target["size"][1]
+
+    # Aplicar ya el mismo zoom que navigate_windows.py usaria al enfocarla,
+    # para que ir a otra ventana y volver a esta despues no le cambie el
+    # tamano de sorpresa (si ya esta al tamano "de foco", la formula da 1.0).
+    zoom = zoom_for_window_size(native_w, native_h, monitor["width"], monitor["height"])
+    width, height = native_w * zoom, native_h * zoom
+
     x, y = find_position(width, height, monitor, occupied)
 
     # Llevar la camara (= todas las ventanas flotantes de este workspace) a
@@ -209,7 +239,8 @@ def place_new_window(address):
 
     moves = [(x + dx, y + dy, address)]
     moves += [(o["left"] + dx, o["top"] + dy, o["address"]) for o in occupied]
-    move_windows_batch(moves)
+    resizes = [(width, height, address)] if zoom != 1.0 else []
+    move_windows_batch(moves, resizes)
 
 
 def main():
