@@ -30,42 +30,30 @@ THUMB_SIZE = "440x300"
 MOVE_SETTLE = 0.4      # segundos a esperar tras reposicionar antes de capturar
 PARKING_OFFSET = 20000  # bien fuera de cualquier monitor real
 
-# Cache de capturas: si una ventana no cambio de posicion/tamano desde la
-# ultima vez, no hace falta repetir el baile de mover/aparcar/esperar - se
-# reusa la imagen ya capturada. Solo invalida por geometria, no por contenido
-# (una pestana que cambio de texto sin moverse mostrara la version vieja
-# hasta que la ventana se mueva o redimensione).
+# Cache de capturas: una ventana que ya se capturo alguna vez reusa esa misma
+# imagen siempre, sin importar si se movio, cambio de tamano o su contenido
+# es distinto ahora - solo una ventana NUEVA (que nunca se capturo) toma una
+# captura fresca. Mucho mas rapido que recapturar todo cada vez; el precio es
+# que las miniaturas se quedan desactualizadas hasta que la ventana se cierre
+# (su cache se borra) y se vuelva a abrir.
 CACHE_DIR = os.path.expanduser("~/.cache/omarchy-windows-free-position/window-switcher")
 
 
-def cache_paths(addr):
-    safe = addr.replace("0x", "")
-    return os.path.join(CACHE_DIR, f"{safe}.png"), os.path.join(CACHE_DIR, f"{safe}.geom")
+def cache_path(addr):
+    return os.path.join(CACHE_DIR, f"{addr.replace('0x', '')}.png")
 
 
 def cached_capture(win):
-    """Devuelve la ruta a la imagen cacheada si la geometria no cambio, o None."""
-    addr = win["address"]
-    img_path, geom_path = cache_paths(addr)
-    geom = f"{win['at'][0]},{win['at'][1]},{win['size'][0]},{win['size'][1]}"
-    try:
-        with open(geom_path) as f:
-            if f.read().strip() == geom and os.path.isfile(img_path):
-                return img_path
-    except Exception:
-        pass
-    return None
+    """Devuelve la ruta a la imagen cacheada si esta ventana ya se capturo
+    antes (sin importar si se movio/redimensiono/cambio de contenido)."""
+    img_path = cache_path(win["address"])
+    return img_path if os.path.isfile(img_path) else None
 
 
 def save_to_cache(win, img_path):
-    addr = win["address"]
-    cache_img, geom_path = cache_paths(addr)
-    geom = f"{win['at'][0]},{win['at'][1]},{win['size'][0]},{win['size'][1]}"
     try:
         os.makedirs(CACHE_DIR, exist_ok=True)
-        shutil.copyfile(img_path, cache_img)
-        with open(geom_path, "w") as f:
-            f.write(geom)
+        shutil.copyfile(img_path, cache_path(win["address"]))
     except Exception:
         pass
 
