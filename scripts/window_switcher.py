@@ -117,11 +117,15 @@ def main():
     tmp_dir = tempfile.mkdtemp(prefix="window-switcher-")
     mapping = {}
     try:
-        for i, w in enumerate(windows):
+        for w in windows:
             cls = w.get("class") or "window"
             title = w.get("title") or cls
             label = sanitize(f"{title}" if title.lower() != cls.lower() else cls)
-            img_path = os.path.join(tmp_dir, f"{i:03d} {label}.png")
+            img_path = os.path.join(tmp_dir, f"{label}.png")
+            n = 2
+            while img_path in mapping:
+                img_path = os.path.join(tmp_dir, f"{label} ({n}).png")
+                n += 1
 
             if not capture_window(w, monitor, windows, img_path):
                 make_placeholder(title, img_path)
