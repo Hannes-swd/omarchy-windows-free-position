@@ -110,13 +110,30 @@ def spiral_candidates(cx, cy):
             yield cx + r * math.cos(angle), cy + r * math.sin(angle)
 
 
+def canvas_center(width, height, monitor, occupied):
+    """El centro que importa es el de TUS ventanas ya abiertas en el canvas
+    infinito, no el del recorte de pantalla actual (que puede estar viendo
+    cualquier otra parte del canvas tras un pan). Con canvas vacio, el unico
+    punto de referencia razonable es el centro del monitor."""
+    if not occupied:
+        return monitor["left"] + monitor["width"] / 2 - width / 2, monitor["top"] + monitor["height"] / 2 - height / 2
+
+    left = min(o["left"] for o in occupied)
+    right = max(o["right"] for o in occupied)
+    top = min(o["top"] for o in occupied)
+    bottom = max(o["bottom"] for o in occupied)
+    return (left + right) / 2 - width / 2, (top + bottom) / 2 - height / 2
+
+
 def find_position(width, height, monitor, occupied):
-    cx = monitor["left"] + monitor["width"] / 2 - width / 2
-    cy = monitor["top"] + monitor["height"] / 2 - height / 2
+    cx, cy = canvas_center(width, height, monitor, occupied)
 
     def dist_to_center(pos):
         return (pos[0] - cx) ** 2 + (pos[1] - cy) ** 2
 
+    # Sin limite a la pantalla actual a proposito: el punto de referencia es
+    # el canvas, no el recorte visible, asi que la posicion elegida puede
+    # perfectamente caer fuera de vista si es ahi donde esta el hueco.
     candidates = [(cx, cy)]
     candidates += sorted(packing_candidates(width, height, occupied), key=dist_to_center)
     candidates += list(spiral_candidates(cx, cy))
@@ -125,10 +142,6 @@ def find_position(width, height, monitor, occupied):
     best_overlap = None
 
     for x, y in candidates:
-        # Mantener la ventana mayormente dentro del monitor.
-        x = max(monitor["left"] - width * 0.25, min(x, monitor["left"] + monitor["width"] - width * 0.75))
-        y = max(monitor["top"] - height * 0.25, min(y, monitor["top"] + monitor["height"] - height * 0.75))
-
         rect = {"left": x, "top": y, "right": x + width, "bottom": y + height}
 
         total_overlap = sum(overlap_area(rect, o) for o in occupied)
