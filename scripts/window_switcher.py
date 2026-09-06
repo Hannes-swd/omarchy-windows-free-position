@@ -30,6 +30,61 @@ THUMB_SIZE = "440x300"
 MOVE_SETTLE = 0.4      # segundos a esperar tras reposicionar antes de capturar
 PARKING_OFFSET = 20000  # bien fuera de cualquier monitor real
 
+# Cache de capturas: si una ventana no cambio de posicion/tamano desde la
+# ultima vez, no hace falta repetir el baile de mover/aparcar/esperar - se
+# reusa la imagen ya capturada. Solo invalida por geometria, no por contenido
+# (una pestana que cambio de texto sin moverse mostrara la version vieja
+# hasta que la ventana se mueva o redimensione).
+CACHE_DIR = os.path.expanduser("~/.cache/omarchy-windows-free-position/window-switcher")
+
+
+def cache_paths(addr):
+    safe = addr.replace("0x", "")
+    return os.path.join(CACHE_DIR, f"{safe}.png"), os.path.join(CACHE_DIR, f"{safe}.geom")
+
+
+def cached_capture(win):
+    """Devuelve la ruta a la imagen cacheada si la geometria no cambio, o None."""
+    addr = win["address"]
+    img_path, geom_path = cache_paths(addr)
+    geom = f"{win['at'][0]},{win['at'][1]},{win['size'][0]},{win['size'][1]}"
+    try:
+        with open(geom_path) as f:
+            if f.read().strip() == geom and os.path.isfile(img_path):
+                return img_path
+    except Exception:
+        pass
+    return None
+
+
+def save_to_cache(win, img_path):
+    addr = win["address"]
+    cache_img, geom_path = cache_paths(addr)
+    geom = f"{win['at'][0]},{win['at'][1]},{win['size'][0]},{win['size'][1]}"
+    try:
+        os.makedirs(CACHE_DIR, exist_ok=True)
+        shutil.copyfile(img_path, cache_img)
+        with open(geom_path, "w") as f:
+            f.write(geom)
+    except Exception:
+        pass
+
+
+def prune_cache(open_addresses):
+    """Borra entradas de ventanas que ya no estan abiertas, para que el cache
+    no crezca sin limite con el tiempo."""
+    try:
+        open_safe = {a.replace("0x", "") for a in open_addresses}
+        for fname in os.listdir(CACHE_DIR):
+            stem = fname.rsplit(".", 1)[0]
+            if stem not in open_safe:
+                try:
+                    os.remove(os.path.join(CACHE_DIR, fname))
+                except OSError:
+                    pass
+    except FileNotFoundError:
+        pass
+
 
 def sanitize(name, limit=60):
     name = re.sub(r"[^\w\- ]", "", name).strip()
@@ -113,6 +168,7 @@ def main():
         return
 
     monitor = get_focused_monitor()
+    prune_cache([w["address"] for w in windows])
 
     tmp_dir = tempfile.mkdtemp(prefix="window-switcher-")
     mapping = {}
@@ -127,7 +183,12 @@ def main():
                 img_path = os.path.join(tmp_dir, f"{label} ({n}).png")
                 n += 1
 
-            if not capture_window(w, monitor, windows, img_path):
+            cached = cached_capture(w)
+            if cached:
+                shutil.copyfile(cached, img_path)
+            elif capture_window(w, monitor, windows, img_path):
+                save_to_cache(w, img_path)
+            else:
                 make_placeholder(title, img_path)
 
             mapping[img_path] = w
