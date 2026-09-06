@@ -156,6 +156,11 @@ o.bind(\"SUPER + D\", \"Infinite Desktop: toggle floating/tiled (all windows)\",
 -- Manual escape hatch: reset the currently-enlarged window back to its original size
 o.bind(\"SUPER + 0\", \"Infinite Desktop: reset enlarged window size\", \"python3 ~/scripts/reset_zoom.py\")
 
+-- Visual window switcher (live thumbnails, same gallery UI as the background
+-- switcher). Replaces Omarchy's default \"Next workspace\" on Super+Tab.
+hl.unbind(\"SUPER + TAB\")
+o.bind(\"SUPER + TAB\", \"Infinite Desktop: window switcher\", \"python3 ~/scripts/window_switcher.py\")
+
 -- Switch new windows back to Omarchy's normal automatic tiling (and back
 -- again). Hyprland's Lua window rules aren't cleared on reload, so this only
 -- takes effect after the next full Hyprland restart/login - the notification
