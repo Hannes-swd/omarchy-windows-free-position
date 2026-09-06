@@ -63,7 +63,7 @@ append_block_if_missing() {
     local block="$2"
     mkdir -p "$(dirname "$file")"
     touch "$file"
-    if grep -qF "$MARK_START" "$file"; then
+    if grep -qF -- "$MARK_START" "$file"; then
         warn "$(basename "$file") already has an installed block, skipping (remove it manually to reinstall)."
         return
     fi
