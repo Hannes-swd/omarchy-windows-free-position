@@ -39,12 +39,22 @@ def load_zoom_state():
         return None
 
 
-def save_zoom_state(addr, w, h):
+def save_zoom_state(addr, orig_w, orig_h, zoomed_w, zoomed_h):
     try:
         with open(ZOOM_STATE_FILE, "w") as f:
-            json.dump({"addr": addr, "orig_w": w, "orig_h": h}, f)
+            json.dump({
+                "addr": addr,
+                "orig_w": orig_w, "orig_h": orig_h,
+                "zoomed_w": zoomed_w, "zoomed_h": zoomed_h,
+            }, f)
     except Exception:
         pass
+
+
+def size_matches(size, w, h, tolerance=4):
+    """Compara con tolerancia: algunas apps (terminales con grilla de
+    caracteres) redondean el resize pedido a unos pocos pixeles de distancia."""
+    return abs(size[0] - w) <= tolerance and abs(size[1] - h) <= tolerance
 
 
 def resize_window_centered(addr, new_w, new_h, at, size):
@@ -177,11 +187,14 @@ def pan_to_window(floating, target_addr, center_x, center_y, monitor_w, monitor_
     batch_async(exprs)
     focus_window(target_addr)
 
-    # Restaurar el tamano de la ventana que estaba agrandada antes (si sigue existiendo).
+    # Restaurar el tamano de la ventana que estaba agrandada antes (si sigue
+    # existiendo) - pero solo si sigue en el tamano que nosotros le pusimos.
+    # Si el tamano actual no coincide, el usuario la redimensiono a mano
+    # mientras tanto: respetamos eso y no lo pisamos con el tamano viejo.
     prev = load_zoom_state()
     if prev and prev["addr"] != target_addr:
         prev_window = next((w for w in floating if w["address"] == prev["addr"]), None)
-        if prev_window:
+        if prev_window and size_matches(prev_window["size"], prev["zoomed_w"], prev["zoomed_h"]):
             # prev_window["at"] es su posicion ANTES del pan de arriba (que ya
             # incluyo su propio movimiento por dx,dy); sumamos el delta para
             # no perder ese desplazamiento al recentrar con el nuevo tamano.
@@ -192,7 +205,7 @@ def pan_to_window(floating, target_addr, center_x, center_y, monitor_w, monitor_
     zoom = zoom_for_window_size(orig_w, orig_h, monitor_w, monitor_h)
     new_w, new_h = int(orig_w * zoom), int(orig_h * zoom)
     resize_window_centered(target_addr, new_w, new_h, (center_x - orig_w // 2, center_y - orig_h // 2), (orig_w, orig_h))
-    save_zoom_state(target_addr, orig_w, orig_h)
+    save_zoom_state(target_addr, orig_w, orig_h, new_w, new_h)
 
 
 def main():
