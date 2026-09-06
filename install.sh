@@ -78,6 +78,10 @@ patch_autostart() {
 -- near a screen edge pushes the other windows along. Requires python-evdev
 -- and membership in the 'input' group (see README).
 o.exec_on_start(\"python3 ~/scripts/infinite_desktop_core.py 1.6 > /tmp/infinite-desktop.log 2>&1\")
+
+-- Places new floating windows near screen center without stacking exactly on
+-- top of each other (spreads them out in a spiral if the center is taken).
+o.exec_on_start(\"python3 ~/scripts/smart_placement.py > /tmp/smart-placement.log 2>&1\")
 $MARK_END"
 }
 
