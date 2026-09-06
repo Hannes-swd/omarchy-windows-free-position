@@ -24,7 +24,7 @@ This is an **Omarchy-specific port and rewrite** of [sarodscommits/hyprland-infi
 - **Super+D** — toggle every window on the workspace between floating and tiled.
 - **Super+0** — manual escape hatch: snaps the currently-enlarged window back to its original size.
 - **Super+M** — toggle new windows back to Omarchy's normal automatic tiling (and back again). Takes effect after your next login/reboot, not instantly — see [note below](#a-note-on-superm).
-- New windows open floating by default, so they immediately join the canvas — placed near screen center, spreading out in a spiral instead of stacking exactly on top of each other if the center's already taken.
+- New windows open floating by default, so they immediately join the canvas — placed next to your other open windows instead of stacking exactly on top of them, and the camera pans there automatically so you always see where it landed, even if that's a part of the canvas you'd scrolled away from.
 
 Everything else (tiled windows, workspaces, the rest of Omarchy) works exactly as before.
 
@@ -80,7 +80,7 @@ Hyprland's Lua window rules are additive and never get cleared on `hyprctl reloa
 
 - `scripts/infinite_desktop_core.py` runs in the background (autostarted), reads raw input events for keyboards, mice **and touchpads** (via `evdev`, auto-detected by device capabilities, no hardcoded device paths), and drives the pan/edge-push behavior directly through `hyprctl`.
 - `scripts/navigate_windows.py` picks the next window in a direction, pans the canvas so it's centered, and resizes it based on how much of the screen it should fill.
-- `scripts/smart_placement.py` runs in the background too (autostarted), listening on Hyprland's own event socket (`.socket2.sock`) for `openwindow` events. When a new floating window appears, it looks at the bounding box of the other floating windows already on that workspace — that's "the canvas", which can be anywhere after you've panned around, not necessarily the current view — and places the new one right up against one of them (with a small gap), picking whichever free spot is closest to the center of that bounding box. With no other windows open yet, it just falls back to the monitor's center.
+- `scripts/smart_placement.py` runs in the background too (autostarted), listening on Hyprland's own event socket (`.socket2.sock`) for `openwindow` events. When a new floating window appears, it looks at the bounding box of the other floating windows already on that workspace — that's "the canvas", which can be anywhere after you've panned around, not necessarily the current view — and places the new one right up against one of them (with a small gap), picking whichever free spot is closest to the center of that bounding box. With no other windows open yet, it just falls back to the monitor's center. It then pans every floating window on that workspace by the same amount needed to bring the new window's spot to the actual center of your screen, so it's never opening somewhere you can't see.
 - Everything else (`move_window.py`, `move_window_tiled.py`, `resize_window.py`, `floating_tile_toggle.py`, `reset_zoom.py`, `hypr_ipc.py`) are small focused helpers called from the keybindings.
 
 ## What's different from the original repo
