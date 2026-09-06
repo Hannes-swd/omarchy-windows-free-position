@@ -2,10 +2,11 @@
 """
 smart_placement.py
 Escucha el socket2 de Hyprland y, cada vez que se abre una ventana flotante
-nueva, la coloca lo mas cerca posible del centro de pantalla sin superponerse
-(con un margen) a otras ventanas flotantes ya abiertas en el mismo workspace.
-Si el centro esta libre la usa directamente; si no, prueba posiciones en
-espiral alrededor del centro hasta encontrar un hueco.
+nueva, la coloca junto al centro del canvas (el centro de tus ventanas
+flotantes ya abiertas, no necesariamente lo que se ve en pantalla ahora
+mismo) sin superponerse (con un margen) a ninguna. Despues mueve TODA la
+camara (todas las ventanas flotantes de ese workspace) para que la nueva
+ventana quede visible en pantalla, en vez de perderse fuera de vista.
 """
 
 import json
@@ -29,12 +30,25 @@ def hyprctl_json(args, timeout=1):
         return None
 
 
+def move_window_lua(x, y, address):
+    return f'hl.dsp.window.move({{ window = "address:{address}", x = {int(x)}, y = {int(y)}, relative = false }})'
+
+
 def move_window_exact(x, y, address, timeout=1):
     try:
-        subprocess.run(
-            ["hyprctl", "dispatch", f'hl.dsp.window.move({{ window = "address:{address}", x = {int(x)}, y = {int(y)}, relative = false }})'],
-            capture_output=True, timeout=timeout,
-        )
+        subprocess.run(["hyprctl", "dispatch", move_window_lua(x, y, address)], capture_output=True, timeout=timeout)
+    except Exception:
+        pass
+
+
+def move_windows_batch(moves, timeout=2):
+    """moves: lista de (x, y, address). Un solo hyprctl --batch para que la
+    camara se mueva de golpe en vez de ventana por ventana."""
+    if not moves:
+        return
+    cmd = " ; ".join(f"dispatch {move_window_lua(x, y, addr)}" for x, y, addr in moves)
+    try:
+        subprocess.run(["hyprctl", "--batch", cmd], capture_output=True, timeout=timeout)
     except Exception:
         pass
 
@@ -177,11 +191,25 @@ def place_new_window(address):
             continue
         x, y = w["at"][0], w["at"][1]
         ww, wh = w["size"][0], w["size"][1]
-        occupied.append({"left": x, "top": y, "right": x + ww, "bottom": y + wh})
+        occupied.append({
+            "address": w["address"],
+            "left": x, "top": y, "right": x + ww, "bottom": y + wh,
+        })
 
     width, height = target["size"][0], target["size"][1]
     x, y = find_position(width, height, monitor, occupied)
-    move_window_exact(x, y, address)
+
+    # Llevar la camara (= todas las ventanas flotantes de este workspace) a
+    # donde quedo la nueva ventana, para que aparezca visible en pantalla en
+    # vez de perderse en una parte del canvas fuera de vista.
+    view_cx = monitor["left"] + monitor["width"] / 2
+    view_cy = monitor["top"] + monitor["height"] / 2
+    dx = view_cx - (x + width / 2)
+    dy = view_cy - (y + height / 2)
+
+    moves = [(x + dx, y + dy, address)]
+    moves += [(o["left"] + dx, o["top"] + dy, o["address"]) for o in occupied]
+    move_windows_batch(moves)
 
 
 def main():
