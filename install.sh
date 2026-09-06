@@ -116,6 +116,24 @@ if not autofloat_disabled then
   -- overrides the generic float rule above. Override it back to floating.
   o.window({ tag = \"chromium-based-browser\" }, { float = true, size = \"60% 60%\" })
   o.window({ tag = \"firefox-based-browser\" }, { float = true, size = \"60% 60%\" })
+
+  -- Some Omarchy defaults deliberately size specific utility windows (PiP
+  -- video overlays, password-manager popups, the webcam overlay, Steam,
+  -- Battle.net, LocalSend, the About window) - the blanket rule above would
+  -- override those with 60%x60% too. Re-assert their intended sizes so they
+  -- stay as Omarchy designed them; only regular app windows get the
+  -- Infinite Desktop default size.
+  o.window({ tag = \"pip\" }, { size = { 600, 338 } })
+  o.window({ tag = \"chromium-based-browser\", title = \"^Meet %- .+\" }, { size = { 600, 338 } })
+  o.window({ tag = \"floating-window\" }, { size = { 875, 600 } })
+  o.window(\"localsend\", { size = { 1100, 700 } })
+  o.window({ class = \"^steam_app_battlenet\$\", title = \"^Battle\\\\.net\$\" }, { size = { 1280, 800 } })
+  o.window({ class = \"steam\", title = \"Steam\" }, { size = { 1100, 700 } })
+  o.window({ class = \"steam\", title = \"Friends List\" }, { size = { 460, 800 } })
+  o.window(\"org.omarchy.about\", { size = { 920, 480 } })
+  o.window(\"^WebcamOverlay-small\$\", { size = { \"(monitor_h*4/25)\", \"(monitor_h*9/50)\" } })
+  o.window(\"^WebcamOverlay-medium\$\", { size = { \"(monitor_h*2/9)\", \"(monitor_h/4)\" } })
+  o.window(\"^WebcamOverlay-large\$\", { size = { \"(monitor_h*3/10)\", \"(monitor_h*27/80)\" } })
 end
 $MARK_END"
 }
