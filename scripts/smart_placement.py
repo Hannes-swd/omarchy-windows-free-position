@@ -85,9 +85,24 @@ def overlap_area(a, b):
     return ox * oy
 
 
+def packing_candidates(width, height, occupied):
+    """Una posicion pegada a cada lado de cada ventana ya abierta (con el gap),
+    alineada con ese borde. Es donde realmente hay hueco libre junto a algo
+    que ya esta ahi, en vez de un patron geometrico ciego."""
+    for o in occupied:
+        yield o["right"] + GAP, o["top"]
+        yield o["right"] + GAP, o["bottom"] - height
+        yield o["left"] - width - GAP, o["top"]
+        yield o["left"] - width - GAP, o["bottom"] - height
+        yield o["left"], o["bottom"] + GAP
+        yield o["right"] - width, o["bottom"] + GAP
+        yield o["left"], o["top"] - height - GAP
+        yield o["right"] - width, o["top"] - height - GAP
+
+
 def spiral_candidates(cx, cy):
-    """Centro primero, despues anillos crecientes de 8 direcciones alrededor."""
-    yield cx, cy
+    """Anillos crecientes de 8 direcciones alrededor del centro, como red de
+    seguridad si ninguna posicion junto a una ventana existente sirve."""
     for ring in range(1, MAX_RINGS + 1):
         r = ring * STEP
         for angle_deg in (0, 45, 90, 135, 180, 225, 270, 315):
@@ -99,10 +114,17 @@ def find_position(width, height, monitor, occupied):
     cx = monitor["left"] + monitor["width"] / 2 - width / 2
     cy = monitor["top"] + monitor["height"] / 2 - height / 2
 
+    def dist_to_center(pos):
+        return (pos[0] - cx) ** 2 + (pos[1] - cy) ** 2
+
+    candidates = [(cx, cy)]
+    candidates += sorted(packing_candidates(width, height, occupied), key=dist_to_center)
+    candidates += list(spiral_candidates(cx, cy))
+
     best = None
     best_overlap = None
 
-    for x, y in spiral_candidates(cx, cy):
+    for x, y in candidates:
         # Mantener la ventana mayormente dentro del monitor.
         x = max(monitor["left"] - width * 0.25, min(x, monitor["left"] + monitor["width"] - width * 0.75))
         y = max(monitor["top"] - height * 0.25, min(y, monitor["top"] + monitor["height"] - height * 0.75))
