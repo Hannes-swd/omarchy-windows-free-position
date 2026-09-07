@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 """
 smart_placement.py
-Escucha el socket2 de Hyprland y, cada vez que se abre una ventana flotante
-nueva, la coloca junto al centro del canvas (el centro de tus ventanas
-flotantes ya abiertas, no necesariamente lo que se ve en pantalla ahora
-mismo) sin superponerse (con un margen) a ninguna. Despues mueve TODA la
-camara (todas las ventanas flotantes de ese workspace) para que la nueva
-ventana quede visible en pantalla, en vez de perderse fuera de vista.
+Escucha el socket2 de Hyprland para dos eventos:
+
+- openwindow: coloca la ventana flotante nueva junto al centro del canvas
+  (el centro de tus ventanas flotantes ya abiertas, no necesariamente lo que
+  se ve en pantalla ahora mismo) sin superponerse a ninguna, y mueve TODA la
+  camara para que quede visible en vez de perderse fuera de vista.
+- closewindow: si cerrar una ventana hace que Hyprland enfoque otra
+  automaticamente en otra parte del canvas, la camara la sigue igual que con
+  Super+Alt+flecha, para no perder de vista donde quedo el foco.
 """
 
 import json
@@ -16,6 +19,9 @@ import socket
 import subprocess
 import sys
 import time
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from navigate_windows import pan_to_window
 
 GAP = 28          # espacio minimo entre ventanas, para que no se "peguen"/snapeen
 STEP = 70          # separacion entre anillos de la espiral
@@ -243,6 +249,30 @@ def place_new_window(address):
     move_windows_batch(moves, resizes)
 
 
+def handle_close_window():
+    """Si cerrar una ventana dejo el foco de Hyprland en otra ventana flotante
+    en otra parte del canvas, lleva la camara ahi - igual que Super+Alt+flecha."""
+    time.sleep(0.1)  # Hyprland recien enfoca otra ventana automaticamente al cerrar una
+
+    active = hyprctl_json(["activewindow"])
+    if not active or not active.get("address") or not active.get("floating"):
+        return  # nada quedo enfocado, o es tileada (siempre visible, no hace falta panear)
+
+    workspace_id = active.get("workspace", {}).get("id")
+    if workspace_id is None:
+        return
+
+    monitor = monitor_bounds_for_workspace(workspace_id)
+    clients = hyprctl_json(["clients"]) or []
+    floating = [w for w in clients if w.get("floating") and w.get("workspace", {}).get("id") == workspace_id]
+    if not floating:
+        return
+
+    center_x = monitor["left"] + monitor["width"] / 2
+    center_y = monitor["top"] + monitor["height"] / 2
+    pan_to_window(floating, active["address"], center_x, center_y, monitor["width"], monitor["height"])
+
+
 def main():
     path = get_socket_path()
     while True:
@@ -267,6 +297,8 @@ def main():
                     if text.startswith("openwindow>>"):
                         addr = "0x" + text[len("openwindow>>"):].split(",", 1)[0]
                         place_new_window(addr)
+                    elif text.startswith("closewindow>>"):
+                        handle_close_window()
         except Exception:
             pass
         finally:

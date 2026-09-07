@@ -230,16 +230,20 @@ def main():
         return
 
     # ── modo flotante ──────────────────────────────────────
-    if len(floating) <= 1:
+    monitor = get_focused_monitor()
+    center_x = monitor["x"] + monitor["width"] // 2
+    center_y = monitor["y"] + monitor["height"] // 2
+
+    if len(floating) == 1:
+        # Nada entre que navegar, pero igual centrar/enfocar la unica ventana
+        # en vez de no hacer nada - asi Super+Alt+flecha siempre lleva a algo.
+        pan_to_window(floating, floating[0]["address"], center_x, center_y, monitor["width"], monitor["height"])
         return
 
     focused = hyprctl_json(["activewindow"])
     if not focused or not focused.get("address"):
         return
 
-    monitor = get_focused_monitor()
-    center_x = monitor["x"] + monitor["width"] // 2
-    center_y = monitor["y"] + monitor["height"] // 2
     current_bounds = get_window_bounds(focused)
     target = find_target(floating, current_bounds, (center_x, center_y), direction)
     if target:
