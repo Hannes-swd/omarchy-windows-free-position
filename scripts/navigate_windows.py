@@ -17,7 +17,7 @@ import json
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from hypr_ipc import (hyprctl_json, move_focus, focus_window, move_window_exact_lua,
-                       batch_async, resize_window_exact, move_window_exact)
+                       batch_async, resize_window_exact, move_window_exact, dispatch)
 
 DIR_SHORT = {"left": "l", "right": "r", "up": "u", "down": "d"}
 
@@ -62,6 +62,12 @@ def resize_window_centered(addr, new_w, new_h, at, size):
     cy = at[1] + size[1] // 2
     resize_window_exact(new_w, new_h, addr)
     move_window_exact(cx - new_w // 2, cy - new_h // 2, addr)
+
+
+def toggle_fullscreen(address):
+    """window = "address:X" hace que el toggle de fullscreen aplique a esa
+    ventana puntual, no a la que este enfocada en ese momento."""
+    dispatch(f'hl.dsp.window.fullscreen({{ window = "address:{address}", mode = "fullscreen" }})')
 
 
 def movefocus(direction):
@@ -222,9 +228,34 @@ def main():
 
     clients = hyprctl_json(["clients"]) or []
     ws_clients = [w for w in clients if w.get("workspace", {}).get("id") == workspace_id]
+    focused = hyprctl_json(["activewindow"])
+
     # Una ventana en fullscreen reporta "at"/"size" como todo el monitor, no su
-    # geometria real - incluirla aca corrompe el paneo/zoom de las demas.
+    # geometria real - incluirla en el paneo/zoom de las demas lo corrompe
+    # todo, asi que se excluye de esta lista de candidatas "normales".
     floating = [w for w in ws_clients if w.get("floating") and not w.get("fullscreen")]
+
+    # Si la ventana enfocada esta en fullscreen, Super+Alt+flecha no debe
+    # panear nada (no tiene sentido con todo tapado): en vez de eso, ella
+    # misma sale de fullscreen (Hyprland la devuelve solita a su posicion de
+    # antes) y la ventana destino entra en fullscreen en su lugar - el
+    # fullscreen "viaja" con la navegacion en vez de quedar pegado.
+    if focused and focused.get("address") and focused.get("fullscreen") and floating:
+        monitor = get_focused_monitor()
+        center_x = monitor["x"] + monitor["width"] // 2
+        center_y = monitor["y"] + monitor["height"] // 2
+        current_bounds = get_window_bounds(focused)
+        target = find_target(floating, current_bounds, (center_x, center_y), direction)
+        if not target:
+            # Con una sola candidata, o si por coincidencia su centro cae
+            # justo en el centro del monitor (find_target no la cuenta ni a
+            # la izquierda ni a la derecha en ese caso limite), no hay mucho
+            # que razonar espacialmente con todo tapado igual - se toma la
+            # primera disponible en vez de no hacer nada.
+            target = floating[0]
+        toggle_fullscreen(focused["address"])
+        toggle_fullscreen(target["address"])
+        return
 
     # ── modo mosaico ──────────────────────────────────────────────────────────
     if not floating:
@@ -242,7 +273,6 @@ def main():
         pan_to_window(floating, floating[0]["address"], center_x, center_y, monitor["width"], monitor["height"])
         return
 
-    focused = hyprctl_json(["activewindow"])
     if not focused or not focused.get("address"):
         return
 
