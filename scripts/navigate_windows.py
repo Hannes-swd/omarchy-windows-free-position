@@ -222,7 +222,9 @@ def main():
 
     clients = hyprctl_json(["clients"]) or []
     ws_clients = [w for w in clients if w.get("workspace", {}).get("id") == workspace_id]
-    floating = [w for w in ws_clients if w.get("floating")]
+    # Una ventana en fullscreen reporta "at"/"size" como todo el monitor, no su
+    # geometria real - incluirla aca corrompe el paneo/zoom de las demas.
+    floating = [w for w in ws_clients if w.get("floating") and not w.get("fullscreen")]
 
     # ── modo mosaico ──────────────────────────────────────────────────────────
     if not floating:

@@ -204,7 +204,7 @@ def place_new_window(address):
 
     clients = hyprctl_json(["clients"]) or []
     target = next((w for w in clients if w.get("address") == address), None)
-    if not target or not target.get("floating"):
+    if not target or not target.get("floating") or target.get("fullscreen"):
         return
 
     workspace_id = target.get("workspace", {}).get("id")
@@ -216,6 +216,8 @@ def place_new_window(address):
             continue
         if not w.get("floating"):
             continue
+        if w.get("fullscreen"):
+            continue  # reporta "at"/"size" como todo el monitor mientras esta asi, no su geometria real
         if w.get("workspace", {}).get("id") != workspace_id:
             continue
         x, y = w["at"][0], w["at"][1]
@@ -255,8 +257,8 @@ def handle_close_window():
     time.sleep(0.1)  # Hyprland recien enfoca otra ventana automaticamente al cerrar una
 
     active = hyprctl_json(["activewindow"])
-    if not active or not active.get("address") or not active.get("floating"):
-        return  # nada quedo enfocado, o es tileada (siempre visible, no hace falta panear)
+    if not active or not active.get("address") or not active.get("floating") or active.get("fullscreen"):
+        return  # nada quedo enfocado, es tileada, o ya esta fullscreen (siempre visible, no hace falta panear)
 
     workspace_id = active.get("workspace", {}).get("id")
     if workspace_id is None:
@@ -264,7 +266,10 @@ def handle_close_window():
 
     monitor = monitor_bounds_for_workspace(workspace_id)
     clients = hyprctl_json(["clients"]) or []
-    floating = [w for w in clients if w.get("floating") and w.get("workspace", {}).get("id") == workspace_id]
+    floating = [
+        w for w in clients
+        if w.get("floating") and not w.get("fullscreen") and w.get("workspace", {}).get("id") == workspace_id
+    ]
     if not floating:
         return
 

@@ -112,6 +112,10 @@ def capture_window(win, monitor, siblings, out_path):
     for s in siblings:
         if not s.get("floating") or s["address"] == addr:
             continue
+        if s.get("fullscreen"):
+            # Moverla la sacaria de fullscreen como efecto secundario - mejor
+            # dejarla (si tapa la captura, se acepta ese bleed-through raro).
+            continue
         sx, sy = s["at"][0], s["at"][1]
         sw, sh = s["size"][0], s["size"][1]
         if rects_overlap(anchor_x, anchor_y, w, h, sx, sy, sw, sh):
@@ -192,8 +196,11 @@ def main():
         target = mapping[selected]
         addr = target["address"]
 
-        if target.get("floating"):
-            floating = [w for w in windows if w.get("floating")]
+        if target.get("floating") and not target.get("fullscreen"):
+            # Fullscreen reporta "at"/"size" como todo el monitor, no su
+            # geometria real - se excluyen del paneo por la misma razon que
+            # en navigate_windows.py; solo se enfocan directamente.
+            floating = [w for w in windows if w.get("floating") and not w.get("fullscreen")]
             center_x = monitor["x"] + monitor["width"] // 2
             center_y = monitor["y"] + monitor["height"] // 2
             pan_to_window(floating, addr, center_x, center_y, monitor["width"], monitor["height"])
