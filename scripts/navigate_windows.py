@@ -255,6 +255,11 @@ def main():
             target = floating[0]
         toggle_fullscreen(focused["address"])
         toggle_fullscreen(target["address"])
+        # El toggle de fullscreen NO mueve el foco de Hyprland solo: sin esto,
+        # activewindow seguiria reportando la ventana vieja (ya no fullscreen)
+        # como enfocada, y el proximo Super+Alt+flecha tomaria el camino
+        # equivocado (paneo normal en vez de destogglear el fullscreen nuevo).
+        focus_window(target["address"])
         return
 
     # ── modo mosaico ──────────────────────────────────────────────────────────
